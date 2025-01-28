@@ -20,7 +20,7 @@ Content of the projects in this repository:
  
 		2. Movie rating analysis
 
-	D. Data Engineering
+	D. Data Engineering Category
  
 		1. Wine rating analysis using web scraping, Azure Synapse Analytics and Power BI
  

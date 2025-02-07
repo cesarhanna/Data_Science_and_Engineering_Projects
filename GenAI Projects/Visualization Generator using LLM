@@ -203,7 +203,7 @@ class Dataframe():
                         when you import tkinter as tk, make sure to use tk instead of tkinter.
                       """
 
-            # Generating the code using LLM. I will be using the 'gpt-3.5-turbo' model:
+            # Generating the code using LLM. I will be using the 'gpt-4o' model:
             client = OpenAI(
                 api_key="######")
             response = client.chat.completions.create(

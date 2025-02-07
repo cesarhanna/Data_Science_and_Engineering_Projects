@@ -3,6 +3,7 @@ from tkinter import ttk
 import tkinter as tk
 import pandas as pd
 import psycopg2
+from xmlrpc.client import Error
 from sqlalchemy import create_engine, inspect
 from sqlalchemy import text
 from matplotlib.figure import Figure

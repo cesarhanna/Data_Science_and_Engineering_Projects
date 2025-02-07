@@ -217,8 +217,11 @@ class Dataframe():
             match = re.search(r"```python\s*([\s\S]*?)\s*```", generated_code)
             if match:
                 extracted_code = match.group(1).strip()
-            exec(extracted_code)
-
+            try:
+                exec(extracted_code)  # Putting the execution of the code in a try-catch block,
+                                        # since sometimes the LLM code has errors, so we want to generate it again
+            except Error:
+                tk.messagebox.showerror("Visualization Error", "Code could not be generated. Please try again.")
         else:
             tk.messagebox.showerror("Data Error", "No table selected")
 
@@ -227,6 +230,9 @@ class Dataframe():
         dataframe_selector.delete(0, END)
         del dataframe
 
+def close_app():
+    frame.window.destroy()  # Destroy the Tkinter window
+    exit()  # Exit the app
 
 db_conn = Database_connection(schema="banking_app", host='127.0.0.1', port=######, database='###', user='####', password='#####', connect_timeout=3)
 db_conn.create_database_engine()
@@ -236,4 +242,5 @@ metadata.import_metadata()
 
 frame = Frames_and_widgets()
 frame.create_widgets()
+frame.window.protocol("WM_DELETE_WINDOW", close_app)  # Closes the app when the frame is closed
 frame.window.mainloop()

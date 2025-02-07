@@ -1,1 +1,239 @@
+from tkinter import *
+from tkinter import ttk
+import tkinter as tk
+import pandas as pd
+import psycopg2
+from sqlalchemy import create_engine, inspect
+from sqlalchemy import text
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
+NavigationToolbar2Tk)
+from openai import OpenAI
+import re
 
+
+class Database_connection():
+    def __init__(self, schema, host, port, database, user, password, connect_timeout):
+        self.schema = schema
+        self.host = host
+        self.port = port
+        self.database = database
+        self.user = user
+        self.password = password
+        self.connect_timeout = connect_timeout
+
+    def create_database_engine(self):
+        self.engine = create_engine('postgresql://{}:{}@{}:{}/{}'.format(self.user, self.password, self.host, self.port, self.database))
+
+
+class Table_metadata():
+    def __init__(self, tables_list):
+        self.tables_list = tables_list
+
+    def import_metadata(self):
+        # Using SQLAlchemy's inspector to inspect the database schema, allowing to fetch the table names:
+        inspector = inspect(db_conn.engine)
+
+        # Getting table names from the schema:
+        schema_name = db_conn.schema
+        tables = inspector.get_table_names(schema=schema_name)
+
+        # Appending the tables_list with the table names:
+        for table in tables:
+            self.tables_list.append(table)
+
+
+class Frames_and_widgets():
+    def __init__(self):
+        self.window = Tk()
+        self.title = self.window.title('Graph Generator App')
+        self.geometry = self.window.geometry("800x470")
+
+    def create_widgets(self):
+        global df_selector  # Initializing a global object to be used across different functions
+        df_selector = None  # Giving an initial null value to the object
+
+        df_builder = Dataframe(df_selector)  # Creating an object of the class Dataframe so we can have access to
+        # its functions
+
+        self.col_optionmenu = StringVar()
+        self.table_optionmenu = StringVar(value="Select a Table")
+
+        # Creating dashboard frame:
+        self.dashboard_frame = Frame(self.window, bg="steel blue", width=750, height=40)
+        self.dashboard_frame.grid(row=0, column=0, sticky="nsew")
+
+        # Creating table frame:
+        self.table_frame = Frame(self.window, bg="white", width=750, height=480)
+        self.table_frame.grid(row=0, column=1, sticky="nsew")
+
+        # Creating the grid:
+        self.dashboard_frame.columnconfigure(0, weight=1)
+        self.table_frame.columnconfigure(1, weight=1)
+        self.table_frame.columnconfigure(2, weight=1)
+        self.table_frame.rowconfigure(0, weight=1)
+        # self.table_frame.rowconfigure(1, weight=0)
+        self.dashboard_frame.rowconfigure(0, weight=0)
+        self.dashboard_frame.rowconfigure(1, weight=0)
+        self.dashboard_frame.rowconfigure(2, weight=0)
+        self.dashboard_frame.rowconfigure(3, weight=0)
+        self.dashboard_frame.rowconfigure(4, weight=0)
+        self.dashboard_frame.rowconfigure(5, weight=0)
+
+        # Creating the widgets:
+        self.menu = OptionMenu(self.dashboard_frame, self.table_optionmenu, *metadata.tables_list)
+        self.menu.config(bg='Black', fg='White')
+        self.menu.grid(row=0, column=0, sticky="w", pady=20, padx=20)
+
+        self.button1 = Button(self.dashboard_frame, text='Import Data', bg="turquoise",
+                              command=lambda: df_builder.update_listbox(self.table_optionmenu.get()))
+        self.button1.grid(row=1, column=0, sticky="w", padx=20)
+
+        self.df_label = Label(self.dashboard_frame, text="Dataframe Fields", bg="steel blue")
+        self.df_label.grid(row=2, column=0, sticky="w", padx=20, pady=10)
+        df_selector = Listbox(self.dashboard_frame, selectmode='multiple', width=20, height=10)
+        df_selector.grid(row=3, column=0, sticky="w", padx=20)
+
+        self.button2 = Button(self.dashboard_frame, text="Generate Dataframe", bg="grey", fg="black",
+                              command=lambda: df_builder.create_dataframe(df_selector))
+        self.button2.grid(row=4, column=0, sticky="w", padx=20, pady=20)
+
+        self.button3 = Button(self.dashboard_frame, text="Generate Graph", bg="blue", fg="white",
+                              command=lambda: df_builder.generate_graph())
+        self.button3.grid(row=5, column=0, sticky="w", padx=20, pady=20)
+
+        # Creating the treeview widget:
+        self.treeview = ttk.Treeview(self.table_frame, show="headings")
+        self.treeview.grid(row=0, column=1, sticky="nsew")
+        self.scrollbar = Scrollbar(self.table_frame, orient="vertical", command=self.treeview.yview)
+        self.treeview.configure(yscrollcommand=self.scrollbar.set)
+        self.scrollbar.grid(row=0, column=2, sticky="ns")
+
+        # Configuring the treeview:
+        self.treeview.configure(yscrollcommand=self.scrollbar.set)
+
+        # Designing the treeview:
+        tree_style = ttk.Style()
+        tree_style.theme_use("clam")
+        tree_style.configure("Treeview",
+                             background="white",
+                             fieldbackground="white",
+                             bordercolor="black",
+                             rowheight=25,
+                             font=('Ariel', 8))
+        tree_style.configure("Treeview.Heading", font=('Ariel', 10, "bold"), background="lightblue")
+
+
+class Dataframe():
+    def __init__(self, listbox):
+        self.listbox = listbox
+        self.df = pd.DataFrame()  # Initialize and empty dataframe
+        self.vis_df = pd.DataFrame()  # # Initialize and empty dataframe that will be used for visualization
+
+    # Import the dataframe from the database:
+    def import_dataframe(self, df_name):
+        try:
+            self.df = pd.read_sql('SELECT * FROM {}.{};'.format(db_conn.schema, df_name), con=db_conn.engine)
+        except:
+            tk.messagebox.showerror("Data Error", "Listbox is empty")
+
+        return self.df
+
+    # Populate the listbox with the selected dataframe:
+    def update_listbox(self, selected_df):
+        df_selector.delete(0, tk.END)
+        cols = list(self.import_dataframe(selected_df).columns.values)
+        if selected_df == "Select a Table":
+            pass
+        else:
+            for col in cols:
+                df_selector.insert(END, col)
+
+    # Create a dataframe from the selected columns in the listbox:
+    def create_dataframe(self, df_selector):
+        column_list = []
+        for item in df_selector.curselection():
+            column_list.append(df_selector.get(item))
+        sliced_df = self.df.loc[:, column_list]
+
+        # Call the treeview function to populate the treeview:
+        self.populate_treeview(sliced_df)
+
+        self.vis_df = sliced_df
+
+        self.reset(self.df, df_selector)
+
+    # Create a function that populates the treeview with the required data:
+    def populate_treeview(self, dataframe):
+        # Clear the previous treeview if it exists:
+        for item in frame.treeview.get_children():
+            frame.treeview.delete(item)
+
+        # Create the headers:
+        frame.treeview['column'] = list(dataframe.columns)
+        frame.treeview['show'] = 'headings'
+
+        # Show the headers:
+        for header in frame.treeview['column']:
+            frame.treeview.heading(header, text=header)
+
+        # Populate the treeview with data:
+        treeview_rows = dataframe.to_numpy().tolist()
+        for row in treeview_rows:
+            if row != []:  # This condition checks of the row variable is empty or not
+                frame.treeview.insert("", "end", values=row)
+
+    # Creating a function that generates visualization based on LLM:
+    def generate_graph(self):
+        # Checking if the treeview is not empty so we can generate the graph:
+        if len(frame.treeview.get_children()) > 0:
+            # Converting the dataframe to JSON:
+            df_json = self.vis_df.to_json(orient="records")
+
+            # Creating the prompt to be sent to the LLM:
+            prompt = f"""
+                        I have the following dataset in JSON format:
+                        {df_json}
+
+                        Please generate a Python script using matplotlib or seaborn to visualize this data in an informative way.
+                        Ensure the script is runnable and includes necessary imports.
+                        Ensure the script creates a Tkinter frame and a Canvas.
+                        Ensure to pack the Canvas into the frame.
+                        Add the generated plot to the Canvas.
+                        when you import tkinter as tk, make sure to use tk instead of tkinter.
+                      """
+
+            # Generating the code using LLM. I will be using the 'gpt-3.5-turbo' model:
+            client = OpenAI(
+                api_key="######")
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}])
+            generated_code = response.choices[0].message.content
+
+            # Executing the generated code:
+            global extracted_code
+            extracted_code = None
+            match = re.search(r"```python\s*([\s\S]*?)\s*```", generated_code)
+            if match:
+                extracted_code = match.group(1).strip()
+            exec(extracted_code)
+
+        else:
+            tk.messagebox.showerror("Data Error", "No table selected")
+
+    # Reset the dataframe and the dataframe selector for the next choice:
+    def reset(self, dataframe, dataframe_selector):
+        dataframe_selector.delete(0, END)
+        del dataframe
+
+
+db_conn = Database_connection(schema="banking_app", host='127.0.0.1', port=######, database='###', user='####', password='#####', connect_timeout=3)
+db_conn.create_database_engine()
+
+metadata = Table_metadata([])
+metadata.import_metadata()
+
+frame = Frames_and_widgets()
+frame.create_widgets()
+frame.window.mainloop()

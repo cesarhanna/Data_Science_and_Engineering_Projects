@@ -220,7 +220,7 @@ class Dataframe():
             try:
                 exec(extracted_code)  # Putting the execution of the code in a try-catch block,
                                         # since sometimes the LLM code has errors, so we want to generate it again
-            except Error:
+            except:
                 tk.messagebox.showerror("Visualization Error", "Code could not be generated. Please try again.")
         else:
             tk.messagebox.showerror("Data Error", "No table selected")

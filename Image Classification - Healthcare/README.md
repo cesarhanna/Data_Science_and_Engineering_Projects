@@ -12,3 +12,13 @@ This project aims to create couple of models that predict the eye condition base
 The first model I created is based on Gaussian Naïve Bayes, using purely numpy and Python; no further libraries or packages were used to train and predict. This model was solely created for learning and educational purpose.
 
 The second model I created is a Convolutional Neural Network. In addition to a small application I developed at the end that takes an image and predicts which eye condition represents. This model is accurate enough that it could be used in a production environment, of course, with some enhancements.
+
+Libraries used in this project:
+- Data tabelization and manipulation: Pandas
+- Data type storage: Pickle
+- Data storage reading and writing: cv2, os
+- Data visualization: matplotlib, seaborn
+- Data preprocessing and onehot encoding: sklearn
+- CNN model and layers creation: TensorFlow
+- Data correlation matrix (confusion matrix): sklearn
+- 

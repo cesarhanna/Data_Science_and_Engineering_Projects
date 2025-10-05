@@ -21,4 +21,3 @@ Libraries used in this project:
 - Data preprocessing and onehot encoding: sklearn
 - CNN model and layers creation: TensorFlow
 - Data correlation matrix (confusion matrix): sklearn
-- 
